@@ -3,7 +3,7 @@ This repository contains code and submission documents for the final project of 
 
 - [Gymnasium GitHub Repo](https://github.com/Farama-Foundation/Gymnasium): Contains instructions for installation and example API usage
 - [Lunar Lander Environment](https://gymnasium.farama.org/environments/box2d/lunar_lander/): Contains details of the lunar lander environment
-- [TensorFlow Installation](https://www.tensorflow.org/install): Contains instructions for installation and example API usage
+- [TensorFlow Installation](https://www.tensorflow.org/install/pip#windows-wsl2): Contains instructions for installation and example API usage for WSL2
 - [TensorBoard](https://www.tensorflow.org/tensorboard/get_started): Just some info
 
 ## Setup instructions
