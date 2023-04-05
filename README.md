@@ -7,9 +7,10 @@ This repository contains code and submission documents for the final project of 
 - [TensorBoard](https://www.tensorflow.org/tensorboard/get_started): Just some info
 
 ## Setup instructions
-1. Activate the `lunar_lander` virtual environment: `$ source lunar_lander/bin/activate`
-2. Install all required libraries: `$ pip install -r requirements.txt`
-3. Check that things are working correctly
+1. Create `lunar_lander` virtual environment: `$ virtualenv lunar_lander`
+2. Activate the `lunar_lander` virtual environment: `$ source lunar_lander/bin/activate`
+3. Install all required libraries: `$ pip install -r requirements.txt`
+4. Check that things are working correctly
     1. `$ cd src`
     2. `$ python main.py`
-4. Your environment is set up correctly if you see the Lunar Lander trying to land
+5. Your environment is set up correctly if you see the Lunar Lander trying to land
