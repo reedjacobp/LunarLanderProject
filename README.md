@@ -14,3 +14,5 @@ This repository contains code and submission documents for the final project of 
     1. `$ cd src`
     2. `$ python main.py`
 5. Your environment is set up correctly if you see the Lunar Lander trying to land
+
+Jason Dip-Shit
