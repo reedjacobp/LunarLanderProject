@@ -2,7 +2,7 @@ from utils.policy import EpsilonGreedyPolicy
 import numpy as np
 
 class QLearning:
-    def __init__(self, env, gamma=0.99, learning_rate=0.01, epsilon=0.10):
+    def __init__(self, env, gamma=0.99, learning_rate=0.001, epsilon=0.10):
         self.gamma = gamma
         self.learning_rate = learning_rate
         self.epsilon = epsilon
@@ -67,4 +67,25 @@ class QLearning:
                 s = sp
                 hist.append(s)
 
-        return hist, self.Q
+        return hist
+    
+    def evaluate(self, env, Q, n_episodes=1000, gamma=1.0):
+        returns = []
+        for _ in range(n_episodes):
+            t = 0
+            r = 0.0
+            obs = env.reset()
+            s = self.discretize_state(obs[0])
+            terminated = False
+            while not terminated:
+                values = [Q[(s,a)] for a in list(range(env.action_space.n))]
+                max_value = np.max(values)
+                max_indices = np.where(values == max_value)[0]
+                a = np.random.choice(max_indices)
+                obs, r_temp, terminated, truncated, info = env.step(a)
+                r += gamma**t*a
+                s = self.discretize_state(obs)
+                t += 1
+            returns.append(r)
+
+        return returns

@@ -16,7 +16,4 @@ class EpsilonGreedyPolicy:
             max_value = np.max(values)
             max_indices = np.where(values == max_value)[0]
             a = np.random.choice(max_indices)
-            print("Q values:", values)
-            print("Actions:", actions)
-            print("Selected action:", a)
             return a
