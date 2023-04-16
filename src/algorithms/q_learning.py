@@ -191,3 +191,4 @@ class QLearning:
         print(f'The best Q was saved to {self.qlearning_data_path}/best_Q.npy')
         print(f'Plots were saved to: {self.plots_path}')
         print(f'Videos were saved to: {self.video_path}')
+        
