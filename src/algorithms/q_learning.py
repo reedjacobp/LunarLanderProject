@@ -11,7 +11,7 @@ from utils.policy import EpsilonGreedyPolicy
 from gymnasium.utils.save_video import save_video
 
 class QLearning:
-    def __init__(self, env, n_episodes=1000, gamma=0.99, learning_rate=0.0001, epsilon=0.1):
+    def __init__(self, env, n_episodes=1000, gamma=0.99, learning_rate=0.01, epsilon=0.1):
         self.env = env
         self.n_episodes = n_episodes
         self.gamma = gamma
@@ -20,17 +20,17 @@ class QLearning:
         self.policy = EpsilonGreedyPolicy()
         self.state_dict = {}
         self.step_starting_index = 0
-        self.video_path = os.path.abspath(os.path.join(this_dir, '..', '..', 'data', 'qlearning', 'videos'))
-        self.plots_path = os.path.abspath(os.path.join(this_dir, '..', '..', 'data', 'qlearning', 'plots'))
         self.qlearning_data_path = os.path.abspath(os.path.join(this_dir, '..', '..', 'data', 'qlearning'))
+        self.video_path = os.path.abspath(os.path.join(self.qlearning_data_path, 'videos'))
+        self.plots_path = os.path.abspath(os.path.join(self.qlearning_data_path, 'plots'))
 
         # Initialize state dictionary
-        # For the first 6 states, it will have 12 linearly spaced discretized points (num=12) 
+        # For the first 6 states, it will have 8 linearly spaced discretized points (num=8) 
         # and the last 2 states will have 2 linearly spaced discretized points
         sample_obs = env.observation_space.sample()
         for i, _ in enumerate(sample_obs):
             if i < 6:
-                self.state_dict[i] = np.linspace(env.observation_space.low[i], env.observation_space.high[i], num=12)
+                self.state_dict[i] = np.linspace(env.observation_space.low[i], env.observation_space.high[i], num=8)
             elif i >= 6:
                 self.state_dict[i] = np.linspace(env.observation_space.low[i], env.observation_space.high[i], num=2)
 
@@ -71,14 +71,13 @@ class QLearning:
                 pbar.update(1)
             return episodes
 
-
-    def episode(self, Q, env, ep_index, epsilon, max_steps=500):
+    def episode(self, Q, env, ep_index, epsilon, max_steps=200):
 
         # First pass
         obs = env.reset()
         s = self.discretize_state(obs[0])
         a = self.policy.select_action(s, list(range(env.action_space.n)), Q, epsilon)
-        obs, r, terminated, truncated, info = env.step(a)
+        obs, r, terminated, truncated, _ = env.step(a)
         sp = self.discretize_state(obs)
         hist = [s]
         i = 0
@@ -94,29 +93,38 @@ class QLearning:
             # Stuff for next iteration
             s = sp
             a = self.policy.select_action(s, list(range(env.action_space.n)), Q, epsilon)
-            obs, r, terminated, truncated, info = env.step(a)
+            obs, r, terminated, truncated, _ = env.step(a)
             sp = self.discretize_state(obs)
             hist.append(s)
             i += 1
 
-            if terminated or truncated:
+            if terminated or truncated or i==max_steps:
+                env_render = env.render()
                 save_video(
-                    env.render(),
+                    env_render,
                     video_folder=self.video_path,
                     fps=env.metadata["render_fps"],
-                    name_prefix="qlearning-video",
+                    name_prefix="qlearning",
                     step_starting_index=self.step_starting_index,
                     episode_index=ep_index
                 )
                 self.step_starting_index += i
+                i = 0
+                if ep_index==self.n_episodes-1:
+                    save_video(
+                        env_render,
+                        video_folder=self.video_path,
+                        fps=self.env.metadata["render_fps"],
+                        name_prefix="final_qlearning_video",
+                    )
 
         return hist, Q
     
-    def evaluate(self, env, policy, n_episodes_eval=10000, max_steps=500):
+    def evaluate(self, env, policy, n_episodes_eval=1000, max_steps=200):
         
         # Limit the amount of episodes for evaluation
-        if self.n_episodes > 10000:
-            n_episodes_eval = 10000
+        if self.n_episodes > 1000:
+            n_episodes_eval = 1000
         else:
             n_episodes_eval = self.n_episodes
 
@@ -131,7 +139,7 @@ class QLearning:
                 truncated = False
                 while not terminated and not truncated and t < max_steps:
                     a = policy(s)
-                    obs, r_act, terminated, truncated, info = env.step(a)
+                    obs, r_act, terminated, truncated, _ = env.step(a)
                     r += r_act
                     s = self.discretize_state(obs)
                     t += 1
