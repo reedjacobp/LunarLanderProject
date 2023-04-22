@@ -7,8 +7,8 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from utils.plotting import plot_learning_curve
 from gymnasium.utils.save_video import save_video
+from utils.plotting import plot_learning_curve, error_plots
 
 class DQN(nn.Module):
     def __init__(self, env, lr, fc1_dims, fc2_dims, fc3_dims):
@@ -85,31 +85,25 @@ class DQNAgent():
         return action 
 
     def learn(self):
-        #how to deal with memory pre allocated with zeros
-        #start learning as soon as we fill the batch size
 
+        # Just explore until the batch is full
         if self.mem_cnter < self.batch_size:
-            return # dont bother learning just keep exploring until the batch is full
+            return 
         
         self.Q_eval.optimizer.zero_grad()
 
-        max_mem = min(self.mem_cnter,self.mem_size) # take the less full one
-        batch = np.random.choice(max_mem,self.batch_size,replace = False) # get rid of duplicate memories for learning
+        max_mem = min(self.mem_cnter, self.mem_size) # take the less full one
+        batch = np.random.choice(max_mem, self.batch_size, replace=False) # get rid of duplicate memories for learning
 
-        batch_index = np.arange(self.batch_size,dtype = np.int32)
+        batch_index = np.arange(self.batch_size, dtype=np.int32)
 
         state_batch = T.tensor(self.state_memory[batch]).to(self.Q_eval.device) # turn a subset of memory into a pytorch tensor
-
         new_state_batch = T.tensor(self.new_state_memory[batch]).to(self.Q_eval.device)
-
         reward_batch = T.tensor(self.reward_memory[batch]).to(self.Q_eval.device)
-
         terminal_batch = T.tensor(self.terminal_memory[batch]).to(self.Q_eval.device)
-        
         action_batch = self.action_memory[batch]
 
         # drive agent to max action
-
         q_eval = self.Q_eval.forward(state_batch)[batch_index,action_batch] # grab actions you took 
         q_next = self.Q_eval.forward(new_state_batch)# get next actions
         q_next[terminal_batch] = 0.0
@@ -124,9 +118,9 @@ class DQNAgent():
         self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min \
             else self.eps_min
 
-    def train(self, max_steps=700):
+    def train(self, max_steps=700, msim=None):
         # Initialize metrics
-        scores, eps_history, mean_score = [], [], []
+        scores, stds, avg_scores, eps_history = [], [], [], []
         best_score = float('-inf')
 
         # Loop over the range of the number of episodes
@@ -157,7 +151,7 @@ class DQNAgent():
                 env_step += 1
 
                 # Save environment rendering
-                if terminated or truncated or env_step==max_steps:
+                if (terminated or truncated or env_step==max_steps) and msim is None:
                     env_render = self.env.render()
                     save_video(
                         env_render,
@@ -177,13 +171,13 @@ class DQNAgent():
                             name_prefix="final_dqn_video",
                         )
 
-            if score > best_score:
+            if score > best_score and msim is None:
                 best_score = score
-                if score > 100.0:
+                if best_score > 100.0:
                     save_video(
                         env_render,
                         video_folder=self.video_path,
-                        name_prefix=f'best_dqn_score{score:.2f}',
+                        name_prefix=f'best_dqn_score{best_score:.2f}',
                         fps=self.env.metadata["render_fps"],
                     )
 
@@ -191,16 +185,31 @@ class DQNAgent():
             scores.append(score)
             eps_history.append(self.epsilon)
 
-            # Compute average score over the last 25 episodes
+            # Compute average score and std over the last 25 episodes
             avg_score = np.mean(scores[-25:])
-            mean_score.append(avg_score)
-            print('episode', ep_index, 'score %.2f' % score,'avg score %.2f' % avg_score)
-        
-        x = []
+            avg_scores.append(avg_score)
+            std = np.std(scores[-25:])
+            stds.append(std)
 
-        for i in range(0, self.n_episodes):
-            x.append(i)
-        plot_learning_curve(x, scores, mean_score, self.plots_path + '/score_learning_curve.png')
+            print('episode', ep_index, 'score %.2f' % score,'avg score %.2f' % avg_score)
+
+        if msim is not None:
+            plot_learning_curve(list(range(1, self.n_episodes+1)), scores, avg_scores, self.plots_path + f'/score_learning_curve_mc_{msim+1}.png')
+        else:
+            plot_learning_curve(list(range(1, self.n_episodes+1)), scores, avg_scores, self.plots_path + f'/score_learning_curve.png')
+
+        return scores, avg_score, std
+    
+    def run_mc(self, msims=10):
+        mc_avg_scores, mc_stds = [], []
+        for msim in range(msims):
+            print(f'\n****** MC Run {msim+1} ******')
+            _, avg_score, std = self.train(msim=msim)
+            mc_avg_scores.append(avg_score)
+            mc_stds.append(std)
+
+        error_plots(list(range(1, msims+1)), mc_avg_scores, mc_stds, self.plots_path + f'/err_mc.png')
+
         
 
 
