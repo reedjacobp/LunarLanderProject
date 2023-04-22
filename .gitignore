@@ -128,3 +128,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Plots, Videos, and other data files
+*.png
+*.mp4
+*.npy
