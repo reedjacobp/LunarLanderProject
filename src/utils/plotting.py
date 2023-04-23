@@ -21,7 +21,7 @@ def plot_learning_curve(x, scores, mean_scores, filename, plotType):
     plt.xlabel('Epoch')
     plt.ylabel(ylabel)
     plt.legend()
-
+    
     plt.savefig(filename)
 
 def error_plots(x,scores,sems,filename):
@@ -35,5 +35,5 @@ def error_plots(x,scores,sems,filename):
     plt.xlabel('Monte Carlo')
     plt.ylabel('Score')
     plt.legend()
-
+    
     plt.savefig(filename)
