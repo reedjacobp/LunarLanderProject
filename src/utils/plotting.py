@@ -4,10 +4,10 @@ def plot_learning_curve(x, scores, mean_scores, filename, plotType):
 
     if plotType == 'score':
         ylabel = 'Score'
-        title = ylabel
+        title = 'Score Learning Curve'
     elif plotType == 'loss':
         ylabel = 'Loss'
-        title = ylabel
+        title = 'Loss Learning Curve'
     else:
         print("Invalid input for plot type!")
 
@@ -24,12 +24,12 @@ def plot_learning_curve(x, scores, mean_scores, filename, plotType):
     
     plt.savefig(filename)
 
-def error_plots(x,scores,sems,filename):
+def error_plots(x,scores,stds,filename):
     plt.figure()
 
     plt.scatter(x,scores,label='Rolling Avg 25 Obs.')
     plt.xticks(x)
-    plt.errorbar(x, scores, yerr=sems,fmt="o", label='SEM')
+    plt.errorbar(x, scores, yerr=stds,fmt="o", label='STD')
 
     plt.title('Average Score (Final 25 Obs) - DQN ')
     plt.xlabel('Monte Carlo')
