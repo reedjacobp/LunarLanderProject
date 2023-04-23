@@ -18,7 +18,7 @@ class DQN(nn.Module):
         self.fc2_dims = fc2_dims
         self.fc3_dims = fc3_dims
         self.n_actions = env.action_space.n
-        self.fc1=nn.Linear(*self.input_dims,self.fc1_dims)
+        self.fc1 = nn.Linear(*self.input_dims,self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims,self.fc2_dims)
         self.fc3 = nn.Linear(self.fc2_dims,self.fc3_dims)
         self.fc4 = nn.Linear(self.fc3_dims,self.n_actions)
@@ -26,17 +26,17 @@ class DQN(nn.Module):
         self.loss = nn.MSELoss()
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
-
+        self.loss_calc = 0.0
 
     def forward(self,state):
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        x = F.tanh(self.fc1(state))
+        x = F.tanh(self.fc2(x))
+        x = F.tanh(self.fc3(x))
         actions = self.fc4(x)
         return actions
 
 class DQNAgent():
-    def __init__(self, env, n_episodes=100, gamma=0.99, epsilon=1.0, lr=0.001, batch_size=100, mmem_size=100000, eps_end=0.01, eps_dec=5e-4):
+    def __init__(self, env, n_episodes=100, gamma=0.99, epsilon=1.0, lr=1e-3, batch_size=100, mmem_size=100000, max_steps=700, eps_end=0.01, eps_dec=5e-4):
         # Setup agent
         self.env = env
         self.n_episodes = n_episodes
@@ -48,6 +48,7 @@ class DQNAgent():
         self.action_space = list(range(env.action_space.n))
         self.mem_size = mmem_size
         self.batch_size = batch_size
+        self.max_steps = max_steps
         self.mem_cnter = 0
         self.Q_eval = DQN(env, lr, fc1_dims=200, fc2_dims=200, fc3_dims=200)
 
@@ -88,7 +89,7 @@ class DQNAgent():
 
         # Just explore until the batch is full
         if self.mem_cnter < self.batch_size:
-            return 
+            return 0.0
         
         self.Q_eval.optimizer.zero_grad()
 
@@ -117,10 +118,12 @@ class DQNAgent():
         # decay epsilon
         self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min \
             else self.eps_min
+        
+        return loss.item()
 
-    def train(self, max_steps=700, msim=None):
+    def train(self, msim=None):
         # Initialize metrics
-        scores, stds, avg_scores, eps_history = [], [], [], []
+        scores, losses, stds, avg_scores, avg_losses, eps_history = [], [], [], [], [], []
         best_score = float('-inf')
 
         # Loop over the range of the number of episodes
@@ -133,7 +136,7 @@ class DQNAgent():
             s = obs[0]
             env_step = 0
 
-            while not terminated and not truncated and env_step < max_steps:
+            while not terminated and not truncated and env_step < self.max_steps:
                 action = self.select_action(s)
                 
                 # Gather experience
@@ -144,14 +147,14 @@ class DQNAgent():
                 
                 # Store experience into buffer
                 self.store_transition(s, action, r, sp, terminated)
-                self.learn()
+                loss = self.learn()
 
                 # Setup for next iteration
                 s = sp 
                 env_step += 1
 
                 # Save environment rendering
-                if (terminated or truncated or env_step==max_steps) and msim is None:
+                if (terminated or truncated or env_step==self.max_steps) and msim is None:
                     env_render = self.env.render()
                     save_video(
                         env_render,
@@ -183,20 +186,25 @@ class DQNAgent():
 
             # Store the score for this episode
             scores.append(score)
+            losses.append(loss)
             eps_history.append(self.epsilon)
 
             # Compute average score and std over the last 25 episodes
+            avg_loss = np.mean(losses[-25:])
             avg_score = np.mean(scores[-25:])
             avg_scores.append(avg_score)
+            avg_losses.append(avg_loss)
             std = np.std(scores[-25:])
             stds.append(std)
 
             print('episode', ep_index, 'score %.2f' % score,'avg score %.2f' % avg_score)
 
         if msim is not None:
-            plot_learning_curve(list(range(1, self.n_episodes+1)), scores, avg_scores, self.plots_path + f'/score_learning_curve_mc_{msim+1}.png')
+            plot_learning_curve(list(range(1, self.n_episodes+1)), losses, avg_losses, self.plots_path + f'/loss_learning_curve_mc_{msim+1}.png', 'loss')
+            plot_learning_curve(list(range(1, self.n_episodes+1)), scores, avg_scores, self.plots_path + f'/score_learning_curve_mc_{msim+1}.png', 'score')
         else:
-            plot_learning_curve(list(range(1, self.n_episodes+1)), scores, avg_scores, self.plots_path + f'/score_learning_curve.png')
+            plot_learning_curve(list(range(1, self.n_episodes+1)), losses, avg_losses, self.plots_path + f'/loss_learning_curve.png', 'loss')
+            plot_learning_curve(list(range(1, self.n_episodes+1)), scores, avg_scores, self.plots_path + f'/score_learning_curve.png', 'score')
 
         return scores, avg_score, std
     
@@ -209,27 +217,3 @@ class DQNAgent():
             mc_stds.append(std)
 
         error_plots(list(range(1, msims+1)), mc_avg_scores, mc_stds, self.plots_path + f'/err_mc.png')
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
