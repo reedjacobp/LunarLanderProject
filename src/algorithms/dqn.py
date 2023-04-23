@@ -29,9 +29,9 @@ class DQN(nn.Module):
         self.loss_calc = 0.0
 
     def forward(self,state):
-        x = F.tanh(self.fc1(state))
-        x = F.tanh(self.fc2(x))
-        x = F.tanh(self.fc3(x))
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
         actions = self.fc4(x)
         return actions
 

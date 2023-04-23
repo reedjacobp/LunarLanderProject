@@ -5,6 +5,7 @@ def plot_learning_curve(x, scores, mean_scores, filename, plotType):
     if plotType == 'score':
         ylabel = 'Score'
         title = 'Score Learning Curve'
+        plt.axhline(y=200, color="green", linestyle="--", label='Perfect Landing')
     elif plotType == 'loss':
         ylabel = 'Loss'
         title = 'Loss Learning Curve'
@@ -15,7 +16,6 @@ def plot_learning_curve(x, scores, mean_scores, filename, plotType):
  
     plt.plot(x,scores, label=ylabel)
     plt.plot(x,mean_scores, label='Rolling Avg 25 Obs.')
-    plt.axhline(y=200, color="green", linestyle="--", label='Perfect Landing')
     
     plt.title(title)
     plt.xlabel('Epoch')
