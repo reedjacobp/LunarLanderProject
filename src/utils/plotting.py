@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 
 def plot_learning_curve(x, scores, mean_scores, filename, plotType):
 
+    plt.figure()
+
     if plotType == 'score':
         ylabel = 'Score'
         title = 'Score Learning Curve'
@@ -11,8 +13,6 @@ def plot_learning_curve(x, scores, mean_scores, filename, plotType):
         title = 'Loss Learning Curve'
     else:
         print("Invalid input for plot type!")
-
-    plt.figure()
  
     plt.plot(x,scores, label=ylabel)
     plt.plot(x,mean_scores, label='Rolling Avg 25 Obs.')
