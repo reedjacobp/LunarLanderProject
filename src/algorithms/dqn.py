@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from gymnasium.utils.save_video import save_video
-from utils.plotting import plot_learning_curve, error_plots
+from utils.plotting import plot_learning_curve
 
 class DQN(nn.Module):
     def __init__(self, env, lr, fc1_dims, fc2_dims, fc3_dims):
@@ -26,7 +26,6 @@ class DQN(nn.Module):
         self.loss = nn.MSELoss()
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
-        self.loss_calc = 0.0
 
     def forward(self,state):
         x = F.relu(self.fc1(state))
@@ -36,7 +35,7 @@ class DQN(nn.Module):
         return actions
 
 class DQNAgent():
-    def __init__(self, env, n_episodes=100, gamma=0.99, epsilon=1.0, lr=1e-3, batch_size=100, mmem_size=100000, max_steps=700, eps_end=0.01, eps_dec=5e-4):
+    def __init__(self, env, n_episodes=100, gamma=0.99, epsilon=1.0, lr=1e-3, batch_size=100, buffer_size=100000, max_steps=700, eps_end=0.01, eps_dec=5e-4):
         # Setup agent
         self.env = env
         self.n_episodes = n_episodes
@@ -46,18 +45,18 @@ class DQNAgent():
         self.eps_min = eps_end
         self.eps_dec = eps_dec
         self.action_space = list(range(env.action_space.n))
-        self.mem_size = mmem_size
+        self.buffer_size = buffer_size
         self.batch_size = batch_size
         self.max_steps = max_steps
         self.mem_cnter = 0
         self.Q_eval = DQN(env, lr, fc1_dims=200, fc2_dims=200, fc3_dims=200)
 
         #build memory holders
-        self.state_memory = np.zeros((self.mem_size, *[env.observation_space.shape[0]]), dtype=np.float32) # build memory holder
-        self.new_state_memory = np.zeros((self.mem_size, *[env.observation_space.shape[0]]), dtype=np.float32) # build memory holder
-        self.action_memory = np.zeros(self.mem_size, dtype=np.int32)
-        self.reward_memory =np.zeros(self.mem_size, dtype=np.float32)
-        self.terminal_memory = np.zeros(self.mem_size, dtype = np.bool_)
+        self.state_memory = np.zeros((self.buffer_size, *[env.observation_space.shape[0]]), dtype=np.float32) # build memory holder
+        self.new_state_memory = np.zeros((self.buffer_size, *[env.observation_space.shape[0]]), dtype=np.float32) # build memory holder
+        self.action_memory = np.zeros(self.buffer_size, dtype=np.int32)
+        self.reward_memory =np.zeros(self.buffer_size, dtype=np.float32)
+        self.terminal_memory = np.zeros(self.buffer_size, dtype = np.bool_)
 
         # Stuff for data, plots, and videos
         self.step_starting_index = 0
@@ -65,9 +64,17 @@ class DQNAgent():
         self.video_path = os.path.abspath(os.path.join(self.dqn_data_path, 'videos'))
         self.plots_path = os.path.abspath(os.path.join(self.dqn_data_path, 'plots'))
 
+    def reset_memory(self):
+        self.mem_cnter = 0
+        self.state_memory = np.zeros((self.buffer_size, *[self.env.observation_space.shape[0]]), dtype=np.float32)
+        self.new_state_memory = np.zeros((self.buffer_size, *[self.env.observation_space.shape[0]]), dtype=np.float32)
+        self.action_memory = np.zeros(self.buffer_size, dtype=np.int32)
+        self.reward_memory = np.zeros(self.buffer_size, dtype=np.float32)
+        self.terminal_memory = np.zeros(self.buffer_size, dtype=np.bool_)
+
     # Store experience into buffer
     def store_transition(self,state,action,reward,state_,terminated):
-        index = self.mem_cnter % self.mem_size # can overwrite oldest memories
+        index = self.mem_cnter % self.buffer_size # can overwrite oldest memories
         self.state_memory[index] = state
         self.new_state_memory[index] = state_
         self.reward_memory[index]=  reward
@@ -93,7 +100,7 @@ class DQNAgent():
         
         self.Q_eval.optimizer.zero_grad()
 
-        max_mem = min(self.mem_cnter, self.mem_size) # take the less full one
+        max_mem = min(self.mem_cnter, self.buffer_size) # take the less full one
         batch = np.random.choice(max_mem, self.batch_size, replace=False) # get rid of duplicate memories for learning
 
         batch_index = np.arange(self.batch_size, dtype=np.int32)
@@ -207,13 +214,3 @@ class DQNAgent():
             plot_learning_curve(list(range(1, self.n_episodes+1)), scores, avg_scores, self.plots_path + f'/score_learning_curve.png', 'score')
 
         return scores, avg_score, std
-    
-    def run_mc(self, msims=10):
-        mc_avg_scores, mc_stds = [], []
-        for msim in range(msims):
-            print(f'\n****** MC Run {msim+1} ******')
-            _, avg_score, std = self.train(msim=msim)
-            mc_avg_scores.append(avg_score)
-            mc_stds.append(std)
-
-        error_plots(list(range(1, msims+1)), mc_avg_scores, mc_stds, self.plots_path + f'/err_mc.png')
