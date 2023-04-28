@@ -13,7 +13,7 @@ def plot_learning_curve(x, scores, mean_scores, filename, plotType):
         title = 'Loss Learning Curve'
     else:
         print("Invalid input for plot type!")
- 
+
     plt.plot(x,scores, label=ylabel)
     plt.plot(x,mean_scores, label='Rolling Avg 25 Obs.')
     
@@ -23,8 +23,10 @@ def plot_learning_curve(x, scores, mean_scores, filename, plotType):
     plt.legend()
     
     plt.savefig(filename)
+    plt.close()
 
 def error_plots(x,scores,stds,filename):
+
     plt.figure()
 
     plt.scatter(x,scores,label='Rolling Avg 25 Obs.')
@@ -37,3 +39,4 @@ def error_plots(x,scores,stds,filename):
     plt.legend()
     
     plt.savefig(filename)
+    plt.close()
