@@ -23,14 +23,14 @@ class DQN(nn.Module):
         self.fc3 = nn.Linear(self.fc2_dims,self.fc3_dims)
         self.fc4 = nn.Linear(self.fc3_dims,self.n_actions)
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
-        self.loss = nn.MSELoss()
+        self.loss = nn.HuberLoss(delta=0.8)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def forward(self,state):
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        x = F.tanh(self.fc1(state))
+        x = F.tanh(self.fc2(x))
+        x = F.tanh(self.fc3(x))
         actions = self.fc4(x)
         return actions
 
